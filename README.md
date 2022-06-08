@@ -7,19 +7,19 @@ This forked project adds few features like support for WebAuthn and Password-les
 ### Demployment steps
 
 #### Clone the project
-
+```shell
  git clone https://github.com/mmatouk/amazon-cognito-vue-workshop.git
  
  cd amazon-cognito-vue-workshop
  
  npm install
-
+```
 #### Create AWS resources
 
 To create AWS resources needed to run this application, use the command below. This command references region us-west-2, if you are creating your resoirces in another region, make sure you edit the command accordingly.
-
+```shell
 aws cloudformation create-stack --stack-name cognito-workshop --template-body file://aws/UserPoolTemplate.yaml --capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_IAM CAPABILITY_NAMED_IAM --region us-west-2
-
+```
 This template will create several resources including (but not limited to)
 - Cognito User Pool, application client and IAM roles/policies
 - Lambda functions to be used for custom authentication flow and all IAM resources required for it
@@ -29,9 +29,9 @@ This template will create several resources including (but not limited to)
 #### Update configuration
 
 After creating the CloudFormation stack in previous step, you can get the configuration details required to run this demo application from the Output section of the created stack. You can view this from the console or run the command below
-
+```shell
 aws cloudformation describe-stacks --stack-name cognito-workshop --region us-west-2
- 
+ ```
 Open the file src/config/cognito.js and update the configuration from values in stack outputs then save the changes
 
 Now you can run the application, this application has two separate apps that will run on separate ports. Front-end is the web application part and this runs on port 8080, there is also a leightweight backend running at port 8081 and this is required for WebAuthn feature to work.
@@ -39,12 +39,14 @@ This backend is used to create and validate request and response passed to/from 
 
 to run the frontend application use the command below
 
+```shell
 npm run serve
-
+```
 to run the backend service use the command below
 
+```shell
 node server.js
-
+```
 Front-end application is now running at port 8080 and server is running on 8081, however, to be able to use WebAuthn we need to enable HTTPS protocol for the web app and also create a rule that allows requests to /authn route to be directed to a diffrent port (the port of the backend application)
 
 To do that, we will use NGINX as configured in next step.
@@ -54,19 +56,24 @@ To do that, we will use NGINX as configured in next step.
 NGINX installation depends on your environment, commands may be diffrent but the configuration steps and configuration data should be the same.
 
 ###### Install NGINX
+```shell
 sudo yum install nginx
+```
 
 ###### Create self-signed certificate to be used for HTTPS configuration
+```shell
 sudo mkdir /etc/ssl/private
 sudo chmod 700 /etc/ssl/private
 sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
+```
 
 You will be asked series of questions to create the certificate, please follow the on-screen guidance and complete the creation of SSL certificate
 
 ###### Configure NGINX
 Open nginx.conf file in test editor, if you are not sure where this file is located you can use the command nginx -t to display the properties
-
+```shell
 vi /etc/nginx/nginx.conf
+```
 
 Edit the file to include two server configurations to listed on ports 80 and 443 as below
 
@@ -139,12 +146,16 @@ Edit the file to include two server configurations to listed on ports 80 and 443
 
 Save and close the file then start nginx
 
+```shell
 sudo service nginx start 
+```
 
 #### Run the application
 If you haven't already started the application, use the commands below
+```shell
 npm run serve
 node server.js
+```
 
 Now you should be able to access the demo app using the url https://localhost
 **Note** since we are using self-signed certiicate for HTTPS, browsers will display warning message and you may have to manually accept the risk to proceed to the web application.
@@ -156,8 +167,9 @@ Now you should be able to access the demo app using the url https://localhost
 #### Clean-up
 
 To terminate all AWS resources created for this demo application, use the command below to delete the stack that was created earlier
-
+```shell
 aws cloudformation delete-stack --stack-name cognito-workshop --region us-west-2
+```
 
 ### Resource Links
 

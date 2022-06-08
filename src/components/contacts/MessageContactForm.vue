@@ -18,11 +18,11 @@ SPDX-License-Identifier: MIT-0
             <div class="row">
               <div class="col-6">
                 <div class="mb-3 text-start">
-                  <label for="last-name" class="form-label">Number</label>
+                  <label for="phone_number" class="form-label">Number</label>
                   <input
                     type="text"
                     class="form-control form-control-sm"
-                    id="number"
+                    id="phone_number"
                     v-model="contact.number"
                   />
                 </div>
@@ -109,9 +109,6 @@ export default {
         return;
       }
       
-      console.log(store.state.authModule.idToken);
-      console.log(store.state.authModule.credentials);
-      
       // Load the AWS SDK for Node.js
       var AWS = require('aws-sdk');
       AWS.config.update({region: POOL_DATA.Region});
@@ -120,8 +117,10 @@ export default {
       // Create publish parameters
       var params = {
         Message: document.getElementById('smsmessage').value,
-        PhoneNumber: contact.number,
+        PhoneNumber: document.getElementById('phone_number').value
       };
+      
+      console.log(params);
       
       // Create promise and SNS service object
       var publishTextPromise = new AWS.SNS({apiVersion: '2010-03-31'}).publish(params).promise();

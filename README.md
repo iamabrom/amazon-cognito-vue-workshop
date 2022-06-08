@@ -185,7 +185,7 @@ Temporary credentials are retreived during sign-in using the function ```setTemp
 
 ##### Create a premium user
 
-To change user subscription to premium and allow them to send messages, you need to edit user attributes ```custom:subscription``` and ```custom:messagingEnabled```
+To change user subscription to premium and allow them to send messages, you need to edit user attributes ```custom:subscription``` and ```custom:messagingEnabled```, this can be done from Cognito admin console by editing user profile.
 
 #### Clean-up
 

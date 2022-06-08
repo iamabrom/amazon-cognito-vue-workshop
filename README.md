@@ -158,11 +158,16 @@ node server.js
 ```
 
 Now you should be able to access the demo app using the url https://localhost
+
 **Note** since we are using self-signed certiicate for HTTPS, browsers will display warning message and you may have to manually accept the risk to proceed to the web application.
 
-#### Testing basic subscriber
+#### Testing basic user
 
-#### Testing premium subscriber
+You can now register a new user by clicking the Sign-Up link on the login form, this version of the demo app requires user to register a FIDO2 authenticator device during registration, you need to either use a FIDO2 key or use the built-in authenticator in your device if you have one.
+
+![test sign-up](docs/images/test-recorded01.gif)
+
+#### Testing premium user
 
 #### Clean-up
 

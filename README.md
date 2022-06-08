@@ -26,9 +26,17 @@ This template will create several resources including (but not limited to)
 - Cognito Identity Pool and IAM roles/policies required for it to work properly
 - API Gateway resources and sample method that uses Cognito Authorizer for authorization
 
+To be able to test attribute-based access control, additional rules need to be defined for the identity pool to propagate certain attributes from user's token as session tags. These rules can be added from the console or using the command below:
+
+**Note** IdentityPoolId and AuthenticationProvider values can be found in the output section of the cloudformation stack.
+
+```shell
+aws cognito-identity set-principal-tag-attribute-map --identity-pool-id [IdentityPoolId] --identity-provider-name "[AuthenticationProvider]" --no-use-defaults --principal-tags "subscription=custom:subscription,messagingEnabled=custom:messagingEnabled"  --region us-west-2
+```
 #### Update configuration
 
 After creating the CloudFormation stack in previous step, you can get the configuration details required to run this demo application from the Output section of the created stack. You can view this from the console or run the command below
+
 ```shell
 aws cloudformation describe-stacks --stack-name cognito-workshop --region us-west-2
  ```
@@ -157,7 +165,7 @@ npm run serve
 node server.js
 ```
 
-Now you should be able to access the demo app using the url https://localhost
+Now you should be able to access the demo app using the url ```https://localhost```
 
 **Note** since we are using self-signed certificate for HTTPS, browsers will display warning message and you may have to manually accept the risk to proceed to the web application.
 
@@ -165,8 +173,19 @@ Now you should be able to access the demo app using the url https://localhost
 
 You can now register a new user by clicking the Sign-Up link on the login form, this version of the demo app requires user to register a FIDO2 authenticator device during registration, you need to either use a FIDO2 key or use the built-in authenticator in your device if you have one.
 
+Sign-up and sign-in flows are implemented in ```src/components/auth/SignUpForm``` and ```SignInForm```. Backend component (needed for WebAuthn feature) is implemented in ```src/lib/authn.js```
+
 ![test sign-up](docs/images/test-recorded01.gif)
 
+#### Testing RBAC and ABAC
+
+In this demo, premium users can send messages to their contacts. To do that, temporary AWS credentials are issued to each user during sign-in based on their identity token. data in the token determine which role to assume for this user and some data from the token is also passed as session tags and can be referenced in the IAM policy.
+
+Temporary credentials are retreived during sign-in using the function ```setTempCredentials```, this is part of ```src/components/auth/SignInForm```, these credentials are used from ```src/components/contacts/MessageContact``` component to send message through Amazon SNS.
+
+##### Create a premium user
+
+To change user subscription to premium and allow them to send messages, you need to edit user attributes ```custom:subscription``` and ```custom:messagingEnabled```
 
 #### Clean-up
 

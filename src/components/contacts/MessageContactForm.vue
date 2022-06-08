@@ -19,7 +19,7 @@ SPDX-License-Identifier: MIT-0
               <div class="col-6">
                 <div class="mb-3 text-start">
                   <label for="last-name" class="form-label">Number</label>
-                  <input readonly
+                  <input
                     type="text"
                     class="form-control form-control-sm"
                     id="number"
@@ -120,8 +120,7 @@ export default {
       // Create publish parameters
       var params = {
         Message: document.getElementById('smsmessage').value,
-        //PhoneNumber: contact.number,
-        PhoneNumber: "+14154259805",
+        PhoneNumber: contact.number,
       };
       
       // Create promise and SNS service object

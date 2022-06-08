@@ -2,9 +2,9 @@
 
 
 This project is a fork from the original https://github.com/aws-samples/amazon-cognito-vue-workshop, please refer to the original repository for instructions on manual deployment and steps to build this workshop from scratch.
-This forked project adds few features like support for WebAuthn and Password-less authentication, adding full automation to build the dev environment and adds features to get temporary AWS credentials and demonestrates Role based and attribute based access control patterns.
+This forked project adds few features like support for WebAuthn and Password-less authentication, adding full automation to build the dev environment and adds features to get temporary AWS credentials and demonstrates Role based and attribute based access control patterns.
 
-### Demployment steps
+### Deployment steps
 
 #### Clone the project
 ```shell
@@ -16,7 +16,7 @@ This forked project adds few features like support for WebAuthn and Password-les
 ```
 #### Create AWS resources
 
-To create AWS resources needed to run this application, use the command below. This command references region us-west-2, if you are creating your resoirces in another region, make sure you edit the command accordingly.
+To create AWS resources needed to run this application, use the command below. This command references region us-west-2, if you are creating your resources in another region, make sure you edit the command accordingly.
 ```shell
 aws cloudformation create-stack --stack-name cognito-workshop --template-body file://aws/UserPoolTemplate.yaml --capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_IAM CAPABILITY_NAMED_IAM --region us-west-2
 ```
@@ -34,7 +34,7 @@ aws cloudformation describe-stacks --stack-name cognito-workshop --region us-wes
  ```
 Open the file src/config/cognito.js and update the configuration from values in stack outputs then save the changes
 
-Now you can run the application, this application has two separate apps that will run on separate ports. Front-end is the web application part and this runs on port 8080, there is also a leightweight backend running at port 8081 and this is required for WebAuthn feature to work.
+Now you can run the application, this application has two separate apps that will run on separate ports. Front-end is the web application part and this runs on port 8080, there is also a lightweight backend running at port 8081 and this is required for WebAuthn feature to work.
 This backend is used to create and validate request and response passed to/from authenticator devices.
 
 to run the frontend application use the command below
@@ -47,13 +47,13 @@ to run the backend service use the command below
 ```shell
 node server.js
 ```
-Front-end application is now running at port 8080 and server is running on 8081, however, to be able to use WebAuthn we need to enable HTTPS protocol for the web app and also create a rule that allows requests to /authn route to be directed to a diffrent port (the port of the backend application)
+Front-end application is now running at port 8080 and server is running on 8081, however, to be able to use WebAuthn we need to enable HTTPS protocol for the web app and also create a rule that allows requests to /authn route to be directed to a different port (the port of the backend application)
 
 To do that, we will use NGINX as configured in next step.
 
 #### Install and configure NGINX
 
-NGINX installation depends on your environment, commands may be diffrent but the configuration steps and configuration data should be the same.
+NGINX installation depends on your environment, commands may be different but the configuration steps and configuration data should be the same.
 
 ###### Install NGINX
 ```shell
@@ -159,15 +159,14 @@ node server.js
 
 Now you should be able to access the demo app using the url https://localhost
 
-**Note** since we are using self-signed certiicate for HTTPS, browsers will display warning message and you may have to manually accept the risk to proceed to the web application.
+**Note** since we are using self-signed certificate for HTTPS, browsers will display warning message and you may have to manually accept the risk to proceed to the web application.
 
-#### Testing basic user
+#### Testing passwordless authentication
 
 You can now register a new user by clicking the Sign-Up link on the login form, this version of the demo app requires user to register a FIDO2 authenticator device during registration, you need to either use a FIDO2 key or use the built-in authenticator in your device if you have one.
 
 ![test sign-up](docs/images/test-recorded01.gif)
 
-#### Testing premium user
 
 #### Clean-up
 

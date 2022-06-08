@@ -1,0 +1,375 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  # BEGIN USER POOL RESOURCES
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      UserPoolName: !Sub ${AWS::StackName}-UserPool
+      AutoVerifiedAttributes:
+        - email
+      LambdaConfig:
+        DefineAuthChallenge: !GetAtt DefineAuthChallenge.Arn
+        CreateAuthChallenge: !GetAtt CreateAuthChallenge.Arn
+        VerifyAuthChallengeResponse: !GetAtt VerifyAuthChallenge.Arn
+      EnabledMfas: 
+        - SOFTWARE_TOKEN_MFA
+      MfaConfiguration: OPTIONAL
+      Schema:
+        - AttributeDataType: String
+          Name: publicKeyCred
+          Mutable: true
+          StringAttributeConstraints:
+            MaxLength: 1024
+        - AttributeDataType: String
+          Name: subscription
+          Mutable: true
+          StringAttributeConstraints:
+            MaxLength: 1024
+        - AttributeDataType: String
+          Name: messagingEnabled
+          Mutable: true
+          StringAttributeConstraints:
+            MaxLength: 1024
+        
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: my-app
+      GenerateSecret: false
+      UserPoolId: !Ref UserPool
+      ExplicitAuthFlows:
+        - ALLOW_CUSTOM_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+      WriteAttributes:
+        - custom:publicKeyCred
+        - email
+        - name
+      ReadAttributes:
+        - email
+        - name
+        - custom:subscription
+        - custom:messagingEnabled
+        
+  DefineAuthChallenge:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-DefineAuthChallenge
+      CodeUri: s3://webauthn-with-amazon-cognito/DefineAuthChallenge
+      Handler: index.handler
+      Runtime: nodejs12.x
+      MemorySize: 1024
+      Timeout: 30
+      Tracing: Active
+  DefineAuthChallengePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt DefineAuthChallenge.Arn
+      Principal: cognito-idp.amazonaws.com
+      Action: lambda:InvokeFunction
+      SourceArn: !GetAtt UserPool.Arn
+      
+  CreateAuthChallenge:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-CreateAuthChallenge
+      CodeUri: s3://webauthn-with-amazon-cognito/CreateAuthChallenge
+      Handler: index.handler
+      Runtime: nodejs12.x
+      MemorySize: 1024
+      Timeout: 30
+      Tracing: Active
+  CreateAuthChallengePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt CreateAuthChallenge.Arn
+      Principal: cognito-idp.amazonaws.com
+      Action: lambda:InvokeFunction
+      SourceArn: !GetAtt UserPool.Arn
+      
+  VerifyAuthChallenge:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-VerifyAuthChallenge
+      CodeUri: s3://webauthn-with-amazon-cognito/VerifyAuthChallenge
+      Handler: index.handler
+      Runtime: nodejs12.x
+      MemorySize: 1024
+      Timeout: 30
+      Tracing: Active
+  VerifyAuthChallengePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt VerifyAuthChallenge.Arn
+      Principal: cognito-idp.amazonaws.com
+      Action: lambda:InvokeFunction
+      SourceArn: !GetAtt UserPool.Arn
+      
+  # BEGIN IDENTITY POOL RESOURCES
+  IdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties: 
+      IdentityPoolName: !Sub ${AWS::StackName}-Pool
+      CognitoIdentityProviders:
+        - ClientId:  !Ref UserPoolClient
+          ProviderName: !Sub
+            - cognito-idp.${region}.amazonaws.com/${client}
+            - { region: !Ref "AWS::Region",  client: !Ref UserPool}
+      AllowUnauthenticatedIdentities: false
+    DependsOn: UserPoolClient 
+    
+  IdentityPoolRoleMap:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    DependsOn: IdentityPool
+    Properties: 
+      IdentityPoolId: !Ref IdentityPool
+      Roles:
+          authenticated: !GetAtt 
+            - AuthRole
+            - Arn
+          unauthenticated: !Ref 'AWS::NoValue'
+      RoleMappings:
+        "UserPoolMapping": 
+          IdentityProvider:  !Sub
+            - cognito-idp.${region}.amazonaws.com/${pool}:${client}
+            - { region: !Ref "AWS::Region",  pool: !Ref UserPool, client: !Ref UserPoolClient}
+          AmbiguousRoleResolution: AuthenticatedRole 
+          Type: Rules 
+          RulesConfiguration: 
+            Rules: 
+              - Claim: "custom:subscription" 
+                MatchType: "Equals" 
+                Value: "premium"
+                RoleARN: !GetAtt
+                  - AuthRolePremium
+                  - Arn
+  AuthRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-AuthRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action:
+              - "sts:AssumeRoleWithWebIdentity"
+              - "sts:TagSession"
+            Condition:
+              StringEquals:
+                'cognito-identity.amazonaws.com:aud': !Ref 'IdentityPool'
+              'ForAnyValue:StringLike':
+                'cognito-identity.amazonaws.com:amr': authenticated
+                
+  AuthRolePremium:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-AuthRolePremium
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action:
+              - "sts:AssumeRoleWithWebIdentity"
+              - "sts:TagSession"
+            Condition:
+              StringEquals:
+                'cognito-identity.amazonaws.com:aud': !Ref 'IdentityPool'
+              'ForAnyValue:StringLike':
+                'cognito-identity.amazonaws.com:amr': authenticated
+      Policies: 
+        - 
+          PolicyName: !Sub ${AWS::StackName}-SNSPublish
+          PolicyDocument: 
+            Version: "2012-10-17"
+            Statement: 
+              - 
+                Effect: "Allow"
+                Action: 
+                  - "sns:Publish"
+                Resource: "*"
+                Condition:
+                  "ForAnyValue:StringEquals":
+                    "aws:PrincipalTag/messagingEnabled": "true"
+      
+  # BEGIN APIGW RESOURCES
+  ContactsApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub ${AWS::StackName}-ContactsAPI
+      Description: Backend for Contacts Tracker
+
+  ContactsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ContactsApi
+      PathPart: contact
+      ParentId:
+        Fn::GetAtt:
+          - ContactsApi
+          - RootResourceId
+
+  ContactsAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      IdentitySource: method.request.header.authorization
+      Name: CognitoAuthorizer
+      ProviderARNs:
+        - Fn::GetAtt:
+            - UserPool
+            - Arn
+      RestApiId: !Ref ContactsApi
+      Type: COGNITO_USER_POOLS
+
+  ApiGatewayModel:
+    Type: AWS::ApiGateway::Model
+    Properties:
+      ContentType: 'application/json'
+      RestApiId: !Ref ContactsApi
+      Schema: {}
+
+  ContactsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref ContactsAuthorizer
+      HttpMethod: GET
+      Integration:
+        IntegrationHttpMethod: GET
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - ResponseTemplates:
+              application/json: '[
+               {
+                 "id" : "01",
+                 "first_name" : "Mahmoud",
+                 "last_name" : "Matouk",
+                 "number" : "+11234567890",
+                 "country" : "USA"
+               },
+               {
+                 "id" : "02",
+                 "first_name" : "John",
+                 "last_name" : "Smith",
+                 "number" : "+441234567890",
+                 "country" : "UK"
+               },
+               {
+                 "id" : "03",
+                 "first_name" : "Adam",
+                 "last_name" : "Bradely",
+                 "number" : "+491234567890",
+                 "country" : "Germany"
+               },
+               {
+                 "id" : "04",
+                 "first_name" : "Karen",
+                 "last_name" : "James",
+                 "number" : "+391234567890",
+                 "country" : "Italy"
+               }
+              ]'
+            SelectionPattern: '2\d{2}'
+            StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent,X-Api-Version,X-Amz-Target'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,DELETE,GET,HEAD,PATCH,POST,PUT'"
+          - ResponseTemplates:
+              application/json: "{\"message\": \"Error\"}"
+            SelectionPattern: '5\d{2}'
+            StatusCode: 500
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        Type: MOCK
+        TimeoutInMillis: 29000
+      MethodResponses:
+        - ResponseModels:
+            application/json: !Ref ApiGatewayModel
+          StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - ResponseModels:
+            application/json: !Ref ApiGatewayModel
+          StatusCode: 500
+      OperationName: 'mock'
+      ResourceId: !Ref ContactsResource
+      RestApiId: !Ref ContactsApi
+
+  OptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      RestApiId:
+        Ref: ContactsApi
+      ResourceId:
+        Ref: ContactsResource
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent,X-Api-Version,X-Amz-Target'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,DELETE,GET,HEAD,PATCH,POST,PUT'"
+            ResponseTemplates:
+              application/json: ''
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: 'Empty'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+
+  ContactsDeploy:
+    DependsOn:
+      - ContactsApi
+      - ContactsMethod
+      - OptionsMethod
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref ContactsApi
+      StageName: prod
+      
+Outputs :
+  UserPoolId:
+    Value: !Ref 'UserPool'
+  IdentityPoolId:
+    Value: !Ref 'IdentityPool'
+  AuthenticationProvider:
+    Value: !Sub
+            - cognito-idp.${region}.amazonaws.com/${pool}
+            - { region: !Ref "AWS::Region",  pool: !Ref UserPool}
+  AppClientID:
+    Value: !Ref 'UserPoolClient'
+  ServiceEndpoint:
+    Description: URL of the service endpoint
+    Value:
+      "Fn::Join":
+        - ""
+        - - "https://"
+          - Ref: ContactsApi
+          - .execute-api.
+          - Ref: "AWS::Region"
+          - .
+          - Ref: "AWS::URLSuffix"
+          - /prod
+
+

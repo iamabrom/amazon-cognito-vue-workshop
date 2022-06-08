@@ -14,7 +14,9 @@ import Contacts from "@/views/contacts/Contacts";
 import AddContact from "@/views/contacts/AddContact";
 import EditContact from "@/views/contacts/EditContact";
 import DeleteContact from "@/views/contacts/DeleteContact";
+import MessageContact from "@/views/contacts/MessageContact";
 import store from "../store/index.js";
+//import authn from "../libs/authn";
 
 const routes = [
   {
@@ -64,6 +66,15 @@ const routes = [
     path: "/edit-contact/:id",
     name: "EditContact",
     component: EditContact,
+    beforeEnter: isAuthenticated,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/message-contact/:id",
+    name: "MessageContact",
+    component: MessageContact,
     beforeEnter: isAuthenticated,
     meta: {
       requiresAuth: true,

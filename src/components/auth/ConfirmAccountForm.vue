@@ -4,7 +4,7 @@ SPDX-License-Identifier: MIT-0
 -->
 <template>
   <div class="container">
-    <div class="col-3 offset-md-5">
+    <div v-bind:class="{ 'col-3 offset-md-5': isLargeScreen }">
       <base-message :type="messageStyleType" v-if="message">{{
         message
       }}</base-message>
@@ -89,7 +89,45 @@ export default {
         return;
       }
       //Confirm account code starts here
-      //paste code here
+      /* 
+      Create a user pool object
+      The object parameter references the Cognito user pool data held in a constant that we 
+      setup in the Configure application to use Cognito User Pool section
+      */
+      const userPool = new CognitoUserPool(POOL_DATA);
+      
+      // creates an object that contains the user pool info and username
+      const userData = {
+        Username: username.value,
+        Pool: userPool,
+      };
+      
+      /*
+      creates a Cognito User object and accepts the userData object
+      */
+      const cognitUser = new CognitoUser(userData);
+      console.log(cognitUser);
+      
+      /*
+      calls the Cognito confirm registration method
+      the method accepts the confirmation code sent to the
+      users email address used to when signing up
+      */
+      await cognitUser.confirmRegistration(code.value, true, (err, result) => {
+        if (err) {
+          setMessage(err.message, "alert-danger");
+          return;
+        }
+      
+        console.log(result);
+      
+        router.replace({
+          name: "SignIn",
+          params: {
+            message: "You have successfully confirmed your account",
+          },
+        });
+      });
       //Confirm account code ends here
     }
 
@@ -116,6 +154,16 @@ export default {
       isValid,
     };
   },
+  data(){
+    return {
+        isLargeScreen: window.innerWidth >= 800
+      }
+  },
+  created(){
+    addEventListener('resize', () => {
+      this.isLargeScreen = innerWidth >= 800
+    })
+  }
 };
 </script>
 

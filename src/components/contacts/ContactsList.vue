@@ -15,39 +15,32 @@ SPDX-License-Identifier: MIT-0
         <table class="table table-hover table-striped">
           <thead>
             <tr>
-              <th scope="col">First Name</th>
-              <th scope="col">Last Name</th>
+              <th/>
+              <th scope="col">Name</th>
+              <th scope="col">Number</th>
               <th scope="col">Country</th>
-              <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="contact in contact_data" :key="contact.id">
               <td>
-                {{ contact.first_name }}
+                <router-link v-if="contact.id" :to="{ name: 'DeleteContact', params: { id: contact.id } }">
+                  <i class="bi bi-trash-fill"></i>
+                </router-link>
+                
               </td>
               <td>
-                {{ contact.last_name }}
+
+                {{ contact.first_name }} {{ contact.last_name }}
+              </td>
+              <td>
+                {{ contact.number }}
+                <router-link v-if="contact.number" :to="{name: 'MessageContact', params: { id: contact.id },}">
+                  <i class="bi bi-chat me-3"></i>
+                </router-link>
               </td>
               <td>
                 {{ contact.country }}
-              </td>
-              <td>
-                <router-link
-                  v-if="contact.id"
-                  :to="{
-                    name: 'EditContact',
-                    params: { id: contact.id },
-                  }"
-                >
-                  <i class="bi bi-pencil me-3"></i>
-                </router-link>
-                <router-link
-                  v-if="contact.id"
-                  :to="{ name: 'DeleteContact', params: { id: contact.id } }"
-                >
-                  <i class="bi bi-trash-fill"></i>
-                </router-link>
               </td>
             </tr>
           </tbody>
@@ -107,6 +100,10 @@ export default {
     function deleteContact(id) {
       router.push(`/delete-contact/${id}`);
     }
+    
+    function messageContact(id) {
+      router.push(`/message-contact/${id}`);
+    }
 
     const contact_data = computed(function() {
       return store.getters.getContacts;
@@ -129,6 +126,7 @@ export default {
       contact_data,
       addContact,
       deleteContact,
+      messageContact,
       isLoading,
       loadContacts,
       message,

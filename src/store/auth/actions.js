@@ -30,6 +30,9 @@ export default {
   setSession(context, payload) {
     context.commit("setSession", payload);
   },
+  setCredentials(context, payload) {
+    context.commit("setCredentials", payload);
+  },
   logout(context) {
     console.log("log out called");
 

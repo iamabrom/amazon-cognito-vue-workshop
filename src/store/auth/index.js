@@ -18,6 +18,7 @@ export default {
       didAutoLogout: false,
       isAuthenticated: false,
       session: null,
+      credentials: null,
     };
   },
   mutations,

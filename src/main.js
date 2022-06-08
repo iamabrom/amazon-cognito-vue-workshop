@@ -13,6 +13,8 @@ import BaseMessage from "./components/ui/BaseMessage";
 import axios from "axios";
 import VueAxios from "vue-axios";
 
+import 'bootstrap-vue/dist/bootstrap-vue-icons.min.css'
+
 const app = createApp(App);
 
 app

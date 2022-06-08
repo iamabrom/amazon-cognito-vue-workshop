@@ -27,4 +27,7 @@ export default {
   setSession(state, payload) {
     state.session = payload;
   },
+  setCredentials(state, payload) {
+    state.credentials = payload;
+  },
 };

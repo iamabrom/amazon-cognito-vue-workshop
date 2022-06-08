@@ -15,6 +15,9 @@ export default {
   session(state) {
     return state.session;
   },
+  credentials(state) {
+    return state.credentials;
+  },
   refreshToken(state) {
     return state.refreshToken;
   },

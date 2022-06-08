@@ -4,7 +4,7 @@ SPDX-License-Identifier: MIT-0
 -->
 <template>
   <div class="container">
-    <div class="col-4 offset-md-4">
+    <div v-bind:class="{ 'col-4 offset-md-4': isLargeScreen }">
       <base-message :type="messageStyleType" v-if="message">{{
         message
       }}</base-message>
@@ -30,8 +30,7 @@ SPDX-License-Identifier: MIT-0
                   </div>
                   <div v-if="showQRCode" class="mb-3 text-center">
                     <div class="text-center">
-                      Scan QR Code using Authy, Microsoft Authenticator or
-                      Google Authenticator
+                      Scan QR Code using an authenticator app that supports Time-based One-Time Password (TOTP)
                     </div>
                     <div class="mt-3">
                       <qrcode-vue
@@ -129,21 +128,91 @@ export default {
       showQRCode.value = true;
 
       //associate Software token code starts here
-      //paste code here
+      //gets reference to the Cognito user pool
+      const userPool = new CognitoUserPool(POOL_DATA);
+      
+      //gets current logged in user
+      const cognitoUser = userPool.getCurrentUser();
+      cognitoUser.setSignInUserSession(store.getters.session);
+      
+      //creates the image data for QR Code that the user will scan
+      cognitoUser.associateSoftwareToken({
+        onSuccess: function(result) {
+          console.log(result);
+        },
+        associateSecretCode: function(secretCode) {
+          qrData.value =
+            "otpauth://totp/CognitoMFA:" +
+            store.getters.email +
+            "?secret=" +
+            secretCode +
+            "&issuer=CognitoJSPOC";
+        },
+        onFailure: function(err) {
+          console.log(err);
+          setMessage("There was a problem generating MFA QR Code.", "alert-danger");
+        },
+      });
       // associate Software token code end here
     }
 
     function verifyMFA() {
       console.log("Assoicating MFA");
       //verify Software token code starts here
-      //paste code here
+      // gets reference to the Cognito user pool
+      const userPool = new CognitoUserPool(POOL_DATA);
+      
+      //gets current logged in user
+      const cognitoUser = userPool.getCurrentUser();
+      cognitoUser.setSignInUserSession(store.getters.session);
+      
+      //verifies the MFA Code and links the Software Token to the users profile
+      cognitoUser.verifySoftwareToken(qrCode.value, "SoftwareToken", {
+        onSuccess: function(result) {
+          console.log(result);
+      
+          setMFA(true);
+          setMessage(
+            "MFA has successfully been setup for your account.",
+            "alert-success"
+          );
+          showQRCode.value = false;
+        },
+        onFailure: function(err) {
+          console.log(err);
+          setMessage(
+            err.message || "There was a problem confirming MFA Code.",
+            "alert-danger"
+          );
+        },
+      });
       //verify Software token code ends here
     }
 
     // method that enables or disables MFA for a users account
     function setMFA(isEnabled) {
       //verify Software token code starts here
-      //paste code here
+      // gets reference to the Cognito user pool
+      const userPool = new CognitoUserPool(POOL_DATA);
+      
+      //gets current logged in user and sets the session
+      const cognitoUser = userPool.getCurrentUser();
+      cognitoUser.setSignInUserSession(store.getters.session);
+      
+      const totpMfaSettings = {
+        PreferredMfa: isEnabled,
+        Enabled: isEnabled,
+      };
+      
+      //sets a users MFA preference
+      cognitoUser.setUserMfaPreference(null, totpMfaSettings, function(err, result) {
+        if (err) {
+          console.log(err);
+        }
+      
+        store.dispatch("setMFA", isEnabled);
+        console.log("setUserMfaPreference call result " + result);
+      });
       //verify Software token code ends here
     }
 
@@ -173,6 +242,16 @@ export default {
       setMessage,
     };
   },
+  data(){
+    return {
+        isLargeScreen: window.innerWidth >= 800
+      }
+  },
+  created(){
+    addEventListener('resize', () => {
+      this.isLargeScreen = innerWidth >= 800
+    })
+  }
 };
 </script>
 

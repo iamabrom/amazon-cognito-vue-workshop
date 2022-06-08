@@ -4,7 +4,7 @@ SPDX-License-Identifier: MIT-0
 -->
 <template>
   <div class="container">
-    <div class="col-3 offset-md-5">
+    <div v-bind:class="{ 'col-3 offset-md-5': isLargeScreen }">
       <base-message :type="messageStyleType" v-if="message">{{
         message
       }}</base-message>
@@ -13,7 +13,7 @@ SPDX-License-Identifier: MIT-0
           <i class="bi bi-person-fill me-2"></i>Sign In
         </template>
         <template v-slot:body>
-          <form @submit.prevent="signIn">
+          <form @submit.prevent="signIn('password')">
             <span v-if="!confirmMFACode">
               <div class="row">
                 <div class="col-12">
@@ -78,7 +78,21 @@ SPDX-License-Identifier: MIT-0
               >
             </div>
           </form>
+
+          <hr>OR
+          <div class="row">
+            <div class="col-12">
+              <div class="mb-3 text-start d-grid gap-2 col-12 mx-auto mt-2">
+                <button class="btn btn-small btn-primary" @click="signIn('passwordless')">
+                  <i class="bi bi-grid me-1"></i>
+                  {{ "Sign In Password-less" }}
+                </button>
+              </div>
+            </div>
+          </div>
+
         </template>
+
       </base-card>
     </div>
   </div>
@@ -90,12 +104,16 @@ import { useStore } from "vuex";
 import { useRouter, useRoute } from "vue-router";
 import { validateSignInForm } from "../../utils/validator";
 import useAlert from "../../hooks/alert";
+import {encode} from 'base64-arraybuffer';
+const { coerceToBase64Url, coerceToArrayBuffer } = require('fido2-lib/lib/utils');
 
 import {
   CognitoUserPool,
   CognitoUser,
   AuthenticationDetails,
 } from "amazon-cognito-identity-js";
+
+import AWS from 'aws-sdk/global';
 
 //imports userpool data from config
 import { POOL_DATA } from "../../config/cognito";
@@ -116,17 +134,144 @@ export default {
     //sets up hook for message alerting
     const { message, messageStyleType, setMessage } = useAlert();
     const confirmMFACode = ref(false);
-
-    // sign in method that calls the Cognito JavaScript SDK
-    function signIn() {
-      // runs form validation code
-      if (!isValid()) {
-        return;
-      }
-      //Sign-in code starts here
-      //paste code here
-      // Sign-in code ends here
+    
+    //---------------Cognito sign-in
+    async function signIn(flow){
+      
+      const userPool = new CognitoUserPool(POOL_DATA);
+        
+        var authenticationData = {
+          Username: username.value, //only username required since we will authenticate user using custom auth flow and will use security key
+          Password: password.value
+        };
+        
+        var userData = {
+          Username: username.value,
+          Pool: userPool,
+        };
+    
+        var authenticationDetails = new AuthenticationDetails(authenticationData);
+        cognitoUser = new CognitoUser(userData);
+        
+        if(flow === 'password'){ //sign-in using password only
+  
+          /**
+          authenticateUser method will trigger authentication with USER_SRP_AUTH flow
+          USER_SRP_AUTH doesn't trigger define auth challenge, this will just authenticate the user using password 
+          (if SMS/TOTP MFA is configured for the user it will also be triggered)
+          **/
+          cognitoUser.authenticateUser(authenticationDetails, authCallBack);
+          
+        }else if(flow === 'passwordless'){ // sign-in using FIDO authenticator only
+          /**
+          initiateAuth method will trigger authentication with CUSTOM_AUTH flow and will not provide any challenge data initially
+          This will allow define auth challenge to respond with CUSTOM_CHALLENGE
+          **/
+          
+          cognitoUser.setAuthenticationFlowType('CUSTOM_AUTH');
+          cognitoUser.initiateAuth(authenticationDetails, authCallBack);
+          
+        }else{ //sign-in with password and use FIDO for 2nd factor
+          /**
+          authenticateUser method will trigger authentication with CUSTOM_AUTH flow and will provide SRP_A as the challenge
+          This will allow define auth challenge to authenticate user using SRP first and then respond with CUSTOM_AUTH
+          **/
+          
+          cognitoUser.setAuthenticationFlowType('CUSTOM_AUTH');
+          cognitoUser.authenticateUser(authenticationDetails, authCallBack);
+          
+        }
     }
+    
+    let cognitoUser;
+    let authCallBack = {
+    	
+      onSuccess(session) {
+        console.log(session);
+        // saves user session info to Vue state system
+        setUserSessionInfo(session);
+        setTempCredentials(session);
+    
+        // after logging in user is navigated to contacts list
+        router.replace({
+          name: "Contacts",
+          params: { message: "You have successfully signed in" },
+        });
+      },
+      customChallenge: async function(challengeParameters) {
+        // User authentication depends on challenge response
+        //----------get creds from security key or platform authenticator
+        var signinOptions = {
+           "challenge": coerceToArrayBuffer(challengeParameters.challenge, "challenge"),//challenge was generated and sent from CreateAuthChallenge lambda trigger
+           "timeout":1800000,
+           "rpId":window.location.hostname,
+           "userVerification":"preferred",
+           "allowCredentials":[
+              {
+                 "id": coerceToArrayBuffer(challengeParameters.credId, "id"),
+                 "type":"public-key",
+                 "transports":["ble","nfc","usb","internal"]
+              }
+           ]
+        }
+        console.log(signinOptions);
+        //get sign in credentials from authenticator
+        const cred = await navigator.credentials.get({
+          publicKey: signinOptions
+        });
+        
+        //prepare credentials challenge response
+        const credential = {};
+        if (cred.response) {
+          const clientDataJSON = encode(cred.response.clientDataJSON);
+          const authenticatorData = encode(cred.response.authenticatorData);
+          const signature = encode(cred.response.signature);
+          const userHandle = encode(cred.response.userHandle);
+          
+          credential.response = {clientDataJSON, authenticatorData, signature, userHandle};
+        }
+        
+        
+        //send credentials to Cognito VerifyAuthChallenge lambda trigger for verification
+        cognitoUser.sendCustomChallengeAnswer(JSON.stringify(credential), this);
+        
+      },
+      onFailure(error) {
+        console.log(error);
+    
+        // If MFA code is invalid error message is displayed
+        if (!error.message.includes("SOFTWARE_TOKEN_MFA_CODE")) {
+          setMessage(error.message, "alert-danger");
+        }
+    
+        store.dispatch("setIsLoading", false);
+      },
+      totpRequired(codeDeliveryDetails) {
+        confirmMFACode.value = true;
+        cognitoUser.sendMFACode(mfaCode.value, this, codeDeliveryDetails);
+      },
+    }
+  
+    //helper function
+    async function _fetch(path, payload){
+      const headers = {'X-Requested-With': 'XMLHttpRequest'};
+      if (payload && !(payload instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+        payload = JSON.stringify(payload);
+      }
+      const res = await fetch(path, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: headers,
+        body: payload
+      });
+      if (res.status === 200) {
+        return res.json();
+      } else {
+        const result = await res.json();
+        throw result.error;
+      }
+    };
 
     // calculates when user will be auto logged out
     function autoTimeout(result) {
@@ -157,12 +302,28 @@ export default {
 
       store.dispatch("setSession", session);
       store.dispatch("setIDToken", session.getIdToken().getJwtToken());
-      store.dispatch(
-        "setUsername",
-        session.idToken.payload["cognito:username"]
-      );
+      store.dispatch("setUsername",session.idToken.payload["cognito:username"]);
       store.dispatch("setIsAuthenticated", true);
       store.dispatch("setEmail", session.idToken.payload.email);
+      
+    }
+    
+    function setTempCredentials(session){
+      
+      var loginObj = {};
+      loginObj[POOL_DATA.IdentityPoolAuthProvider] = session.getIdToken().getJwtToken();
+      
+      AWS.config.region = POOL_DATA.Region;
+      AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+        IdentityPoolId: POOL_DATA.IdentityPoolId,
+        Logins: loginObj
+      });
+      
+      // Make the call to obtain credentials
+      AWS.config.credentials.get(function(){
+        store.dispatch("setCredentials", AWS.config.credentials);
+
+      });
     }
 
     onMounted(function() {
@@ -197,7 +358,17 @@ export default {
       setUserSessionInfo,
     };
   },
+  
+  data(){
+    return {
+        isLargeScreen: window.innerWidth >= 800
+      }
+  },
+  created(){
+    addEventListener('resize', () => {
+      this.isLargeScreen = innerWidth >= 800
+    })
+  }
 };
 </script>
-
 <style></style>

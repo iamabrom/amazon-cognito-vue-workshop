@@ -5,7 +5,7 @@
 import axios from "axios";
 
 // Update with your API Gateway endpoint. This is the Invoke URL you copied after deploying your API.
-const api = "https://your-api-gateway-endpoint-goes-here/contact/";
+const api = "https://oznwnafgd7.execute-api.us-west-2.amazonaws.com/prod/contact/";
 
 /*
   Axios is being used to make calls to API
@@ -30,6 +30,7 @@ export default {
     const response = await axios.get(api, {
       headers: headers,
     });
+
 
     /*
     if status code is 200 then data is loaded in store and

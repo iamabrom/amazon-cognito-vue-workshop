@@ -6,7 +6,7 @@ import axios from "axios";
 import { POOL_DATA } from "../../config/cognito";
 
 // Update with your API Gateway endpoint. This is the Invoke URL you copied after deploying your API.
-const api = POOL_DATA.ServiceEndpoint;
+const api = POOL_DATA.ServiceEndpoint+'/contact';
 
 /*
   Axios is being used to make calls to API

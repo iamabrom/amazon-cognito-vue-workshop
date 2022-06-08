@@ -3,9 +3,10 @@
   SPDX-License-Identifier: MIT-0 
 */
 import axios from "axios";
+import { POOL_DATA } from "../../config/cognito";
 
 // Update with your API Gateway endpoint. This is the Invoke URL you copied after deploying your API.
-const api = "https://oznwnafgd7.execute-api.us-west-2.amazonaws.com/prod/contact/";
+const api = POOL_DATA.ServiceEndpoint;
 
 /*
   Axios is being used to make calls to API

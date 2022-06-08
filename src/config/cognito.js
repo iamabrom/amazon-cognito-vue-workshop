@@ -8,10 +8,10 @@
   replace with your UserPoolId and ClientId values here
 */
 export const POOL_DATA = {
-  UserPoolId: "UserPoolId",
-  ClientId: "ApplicationClientId",
-  IdentityPoolId: "IdentitPoolId",
-  Region: "region",
-  IdentityPoolAuthProvider: "AuthenticationProvider",
-  ServiceEndpoint: "ServiceEndpoint"
+  UserPoolId: "us-west-2_Mg1wzingV",
+  ClientId: "6as6td6b58uqksacdkt2c1k8el",
+  IdentityPoolId: "us-west-2:719fcd07-3174-469f-b0c6-c8676553c513",
+  Region: "us-west-2",
+  IdentityPoolAuthProvider: "cognito-idp.us-west-2.amazonaws.com/us-west-2_Mg1wzing",
+  ServiceEndpoint: "https://oznwnafgd7.execute-api.us-west-2.amazonaws.com/prod/contact"
 };

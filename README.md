@@ -6,6 +6,8 @@ This forked project adds few features like support for WebAuthn and Password-les
 
 ### Deployment steps
 
+![deployment steps](docs/recordings/deployment.mp4)
+
 #### Clone the project
 ```shell
  git clone https://github.com/mmatouk/amazon-cognito-vue-workshop.git

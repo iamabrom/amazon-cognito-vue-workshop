@@ -85,37 +85,6 @@ vi /etc/nginx/nginx.conf
 
 Edit the file to include two server configurations to listed on ports 80 and 443 as below
 
-    server {
-        listen 80 default_server;
-        listen [::]:80 default_server;
-        # Load configuration files for the default server block.
-        include /etc/nginx/default.d/*.conf;
-
-        location / {
-            proxy_pass http://localhost:8080;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
-            proxy_set_header Host $host;
-            proxy_cache_bypass $http_upgrade;
-        }
-
-        location /api/ {
-                proxy_pass         http://localhost:8081;
-                proxy_redirect     off;
-                proxy_set_header   Host $host;
-                proxy_set_header   X-Real-IP $remote_addr;
-                proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header   X-Forwarded-Host $server_name;
-        }
-
-        # redirect server error pages to the static page /50x.html
-        error_page   500 502 503 504  /50x.html;
-        location = /50x.html {
-            root   html;
-        }
-    }
-    
     # HTTPS server
     #
     server {
@@ -134,7 +103,7 @@ Edit the file to include two server configurations to listed on ports 80 and 443
         ssl_prefer_server_ciphers  on;
 
         location / {
-            proxy_pass http://localhost:8080;
+            proxy_pass https://localhost:8080;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';

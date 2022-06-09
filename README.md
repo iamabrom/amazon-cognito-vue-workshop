@@ -165,12 +165,3 @@ To terminate all AWS resources created for this demo application, use the comman
 aws cloudformation delete-stack --stack-name cognito-workshop --region us-west-2
 ```
 
-### Resource Links
-
-- [Get more information about Vue 3](https://v3.vuejs.org/)
-
-### Next Steps
-
-In the next section you will walk-through accessing your development environment for the workshop, and retrieving the source code for the workshop
-
-## [Accessing Development Environment](docs/DevSetup.md)

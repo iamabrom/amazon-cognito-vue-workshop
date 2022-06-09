@@ -6,7 +6,7 @@ This forked project adds few features like support for WebAuthn and Password-les
 
 ### Deployment steps
 
-![deployment steps](docs/recordings/deployment.mp4)
+![deployment steps](docs/images/deployment.gif)
 
 #### Clone the project
 ```shell

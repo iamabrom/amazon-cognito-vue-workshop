@@ -59,7 +59,7 @@ node server.js
 ```
 Front-end application is now running at port 8080 and server is running on 8081, however, to be able to use WebAuthn we need to enable HTTPS protocol for the web app and also create a rule that allows requests to /authn route to be directed to a different port (the port of the backend application)
 
-To do that, we will use NGINX as configured in next step.
+To enable HTTPS, we will use NGINX with a self-signed certificate for demonestration purposes. Using self-signed certificate may be blocked by certain browsers, if you want a fully working PoC, you should consider using an SSL certificate that is properly issued for your domain and use Route53 to create DNS record to access your application.
 
 #### Install and configure NGINX
 

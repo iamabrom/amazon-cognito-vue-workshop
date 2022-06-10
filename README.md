@@ -158,6 +158,8 @@ Temporary credentials are retreived during sign-in using the function ```setTemp
 
 To change user subscription to premium and allow them to send messages, you need to edit user attributes ```custom:subscription``` and ```custom:messagingEnabled```, this can be done from Cognito admin console by editing user profile.
 
+![test sign-up](docs/images/userprofile.png)
+
 #### Clean-up
 
 To terminate all AWS resources created for this demo application, use the command below to delete the stack that was created earlier

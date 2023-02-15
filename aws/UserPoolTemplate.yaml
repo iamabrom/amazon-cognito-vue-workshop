@@ -7,7 +7,7 @@ Resources:
     Properties:
       AdminCreateUserConfig:
         AllowAdminCreateUserOnly: false
-      UserPoolName: !Sub ${AWS::StackName}-UserPool
+      UserPoolName: !Sub ${AWS::StackName}
       AutoVerifiedAttributes:
         - email
       LambdaConfig:
@@ -37,7 +37,7 @@ Resources:
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
-      ClientName: my-app
+      ClientName: my-demo-app
       GenerateSecret: false
       UserPoolId: !Ref UserPool
       ExplicitAuthFlows:
@@ -252,8 +252,8 @@ Resources:
               application/json: '[
                {
                  "id" : "01",
-                 "first_name" : "Mahmoud",
-                 "last_name" : "Matouk",
+                 "first_name" : "Nikki",
+                 "last_name" : "Wolf",
                  "number" : "+11234567890",
                  "country" : "USA"
                },
